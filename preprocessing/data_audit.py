@@ -1,13 +1,9 @@
 from PIL import Image
 from collections import Counter
 import json
-
 import sys
 from pathlib import Path
-
-# Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
-
 import config
 def inspect_images(files):
 
@@ -35,17 +31,10 @@ def inspect_images(files):
         "corrupted": corrupted,
     }
 
-
-# ============================================================
-# MAIN AUDIT
-# ============================================================
-
 def main():
-
     print("=" * 70)
     print("WILDFIRE DATASET AUDIT")
     print("=" * 70)
-
     folders = {
     "train_fire": config.TRAIN_FIRE,
     "train_no_fire": config.TRAIN_NO_FIRE,
