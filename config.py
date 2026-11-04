@@ -6,10 +6,8 @@ import torch
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 DATASET_ROOT = PROJECT_ROOT / "data"
-
 TRAIN_FIRE = DATASET_ROOT / "Training" / "Fire"
 TRAIN_NO_FIRE = DATASET_ROOT / "Training" / "No_Fire"
-
 TEST_FIRE = DATASET_ROOT / "Test" / "Fire"
 TEST_NO_FIRE = DATASET_ROOT / "Test" / "No_Fire"
 
@@ -34,7 +32,7 @@ SEGMENTATION_PAIRS_CSV = PROCESSED_DIR / "segmentation_pairs.csv"
 SEQUENCES_CSV = PROCESSED_DIR / "sequences.csv"
 
 SEGMENTATION_SIZE = (256, 256)
-TEMPORAL_SIZE = (128, 128)  # ConvLSTM temporal prediction
+TEMPORAL_SIZE = (128, 128) 
 
 SEQUENCE_LENGTH = 3
 PREDICTION_HORIZON = 1
@@ -48,30 +46,15 @@ CONVLSTM_EPOCHS = 30
 
 LEARNING_RATE_UNET = 1e-3
 LEARNING_RATE_CONVLSTM = 1e-3
-
-# U-Net fire segmentation.
 UNET_POS_WEIGHT = 3.0
 
-# Proposed growth prediction.
-# Higher because incremental growth is much sparser.
 GROWTH_POS_WEIGHT = 10.0
 
-# Full future-mask baseline.
 FULLMASK_POS_WEIGHT = 3.0
 
-# Used only for converting probability maps to binary masks during evaluation/inference.
 DEFAULT_THRESHOLD = 0.50
 
-THRESHOLD_VALUES = (
-    0.05,
-    0.10,
-    0.15,
-    0.20,
-    0.25,
-    0.30,
-    0.40,
-    0.50,
-)
+THRESHOLD_VALUES = (0.05,0.10,0.15,0.20,0.25,0.30,0.40,0.50,)
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 SEED = 1337
@@ -88,26 +71,9 @@ EVALUATION_CSV = RESULTS_DIR / "evaluation_results.csv"
 THRESHOLD_RESULTS_CSV = RESULTS_DIR / "threshold_results.csv"
 LATENCY_JSON = RESULTS_DIR / "latency.json"
 
-IMAGE_EXTENSIONS = {
-    ".jpg",
-    ".jpeg",
-    ".png",
-    ".bmp",
-    ".tif",
-    ".tiff",
-    ".webp",
-}
-
-FIRE_FRAME_PATTERN = re.compile(
-    r"frame[_]?(\d+)",
-    re.IGNORECASE,
-)
-
-MASK_FRAME_PATTERN = re.compile(
-    r"image_(\d+)",
-    re.IGNORECASE,
-)
-
+IMAGE_EXTENSIONS = {".jpg",".jpeg",".png",".bmp",".tif",".tiff",".webp",}
+FIRE_FRAME_PATTERN = re.compile(r"frame[_]?(\d+)",re.IGNORECASE,)
+MASK_FRAME_PATTERN = re.compile( r"image_(\d+)",re.IGNORECASE,)
 
 def fire_frame_number(path):
     """Extract frame number from classification filename."""
@@ -124,7 +90,6 @@ def mask_frame_number(path):
         return int(match.group(1))
     return None
 
-
 def get_image_files(folder):
     """Return all supported image files recursively."""
     folder = Path(folder)
@@ -134,14 +99,11 @@ def get_image_files(folder):
     return sorted(
         path
         for path in folder.rglob("*")
-        if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
-    )
-
+        if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS)
 
 KAFKA_BOOTSTRAP_SERVERS = "localhost:9092"
 TOPIC_DRONE_FRAMES = "drone-frames"
 TOPIC_PREDICTIONS = "fire-predictions"
-
 
 def seed_everything(seed=SEED):
     random.seed(seed)
@@ -152,44 +114,26 @@ def seed_everything(seed=SEED):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-
-# ============================================================
-# EXPERIMENT SETTINGS (added for the publication version)
-# ============================================================
-
-# Prediction horizons (in frames) swept in the main experiment.
-# 1 is kept only to show that the 1-frame task is near noise level.
 HORIZONS = (1, 5, 10, 20, 30)
 
-# Number of input frames and the gap (in frames) between them.
 INPUT_LEN = 3
 INPUT_STRIDE = 1
 
-# Seeds used for every reported number (mean +/- std over seeds).
 SEEDS = (1337, 2023, 7, 42, 99)
 
-# Frame-level split boundaries as fractions of the frame range:
-# train [0, a) | gap | val [b, c) | gap | test [d, 1].
-# These match the U-Net split so the U-Net never sees a test frame.
 SPLIT_FRACTIONS = (0.70, 0.72, 0.85, 0.87)
 
-# Growth-prediction loss: only pixels OUTSIDE the current fire
-# can grow, so the loss is computed on those pixels only.
 GROWTH_LOSS_POS_WEIGHT = 5.0
 
-# Optional: restrict the loss to a band (pixels) around the current
-# fire edge. None = whole area outside the current mask.
 GROWTH_BAND_PX = None
 
-# Training
 WEIGHT_DECAY = 1e-4
 GRAD_CLIP = 1.0
 EARLY_STOP_PATIENCE = 10
 NUM_WORKERS = 0
 
-# Evaluation
-BOUNDARY_TOLERANCE_PX = 3          # boundary-F1 tolerance at TEMPORAL_SIZE
-BOOTSTRAP_BLOCK = 20               # sequences per bootstrap block
+BOUNDARY_TOLERANCE_PX = 3          
+BOOTSTRAP_BLOCK = 20              
 BOOTSTRAP_SAMPLES = 1000
 PREDS_DIR = RESULTS_DIR / "preds"
 PREDS_DIR.mkdir(parents=True, exist_ok=True)
