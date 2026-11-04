@@ -1,63 +1,24 @@
-"""
-Leakage-free, time-blocked splitting.
-
-split_sequences() assigns a sequence to a split only if EVERY frame it
-touches (first input frame ... target frame) lies inside that split's
-frame interval. Sequences that straddle a boundary are dropped. So no
-frame is ever shared between two splits, for any horizon.
-
-The default fractions match the U-Net's frame-level split, so the
-U-Net (used to create predicted input masks) never trains on a test
-frame.
-"""
-
 import numpy as np
 
-# train [0, a) | gap | val [b, c) | gap | test [d, 1]
 DEFAULT_FRACTIONS = (0.70, 0.72, 0.85, 0.87)
 
-
 def frame_intervals(min_frame, max_frame, fractions=DEFAULT_FRACTIONS):
-    """Return {'train': (lo, hi), 'val': (lo, hi), 'test': (lo, hi)}.
-
-    Intervals are [lo, hi) in frame numbers; the last one includes
-    max_frame.
-    """
     a, b, c, d = fractions
     n = max_frame - min_frame + 1
-
     def at(frac):
         return min_frame + int(n * frac)
-
-    return {
-        "train": (min_frame, at(a)),
-        "val": (at(b), at(c)),
-        "test": (at(d), max_frame + 1),
-    }
-
+    return {"train": (min_frame, at(a)),"val": (at(b), at(c)), "test": (at(d), max_frame + 1),}
 
 def _inside(df, lo, hi):
     return (df["start_frame"] >= lo) & (df["target_frame"] < hi)
 
-
 def split_sequences(df, fractions=DEFAULT_FRACTIONS):
-    """Time-blocked train/val/test split of a sequences table.
-
-    df must contain integer columns `start_frame` (first input frame)
-    and `target_frame`. Returns (train, val, test) DataFrames sorted
-    by current_frame_number.
-    """
     for col in ("start_frame", "target_frame"):
         if col not in df.columns:
-            raise ValueError(
-                f"sequences table needs a '{col}' column; "
-                "rebuild it with preprocessing/build_sequences.py"
-            )
-
+            raise ValueError(f"sequences table needs a '{col}' column; ""rebuild it with preprocessing/build_sequences.py")
     lo = int(df["start_frame"].min())
     hi = int(df["target_frame"].max())
     iv = frame_intervals(lo, hi, fractions)
-
     out = []
     for name in ("train", "val", "test"):
         a, b = iv[name]
@@ -71,32 +32,17 @@ def split_sequences(df, fractions=DEFAULT_FRACTIONS):
 
 
 def blocked_kfold(df, k=5, gap=20):
-    """Blocked temporal cross-validation.
-
-    The frame range is cut into k contiguous blocks. For fold i the
-    test block is i, the validation block is (i+1) mod k, and the rest
-    is training. Every interval is shrunk by `gap` frames on each
-    side so neighbouring blocks never touch.
-
-    Returns a list of (train, val, test) tuples.
-    """
     lo = int(df["start_frame"].min())
     hi = int(df["target_frame"].max())
     edges = np.linspace(lo, hi + 1, k + 1).round().astype(int)
-    blocks = [
-        (int(edges[i]) + gap, int(edges[i + 1]) - gap) for i in range(k)
-    ]
-
+    blocks = [(int(edges[i]) + gap, int(edges[i + 1]) - gap) for i in range(k)]
+    
     def take(block_ids):
         mask = np.zeros(len(df), dtype=bool)
         for j in block_ids:
             a, b = blocks[j]
             mask |= _inside(df, a, b).to_numpy()
-        return (
-            df[mask]
-            .sort_values("current_frame_number")
-            .reset_index(drop=True)
-        )
+        return (df[mask].sort_values("current_frame_number") .reset_index(drop=True))
 
     folds = []
     for i in range(k):
@@ -110,7 +56,6 @@ def blocked_kfold(df, k=5, gap=20):
 
 
 def frames_used(df):
-    """Set of every frame number any sequence in df touches."""
     used = set()
     for s, t in zip(df["start_frame"], df["target_frame"]):
         used.update(range(int(s), int(t) + 1))
@@ -118,34 +63,17 @@ def frames_used(df):
 
 
 def assert_no_frame_overlap(*parts):
-    """Hard check: no frame number appears in two different splits.
-
-    Frames BETWEEN start_frame and target_frame are counted, so this
-    also catches a train target frame landing in the test period.
-    """
     sets = [frames_used(p) for p in parts if len(p)]
     for i in range(len(sets)):
         for j in range(i + 1, len(sets)):
             shared = sets[i] & sets[j]
             if shared:
-                raise AssertionError(
-                    f"Temporal leakage: {len(shared)} frames shared "
-                    f"between split {i} and split {j} "
-                    f"(e.g. {sorted(shared)[:5]})"
-                )
-
-
-# ----------------------------------------------------------------
-# Kept for the U-Net, which works on single frames (no horizon).
-# ----------------------------------------------------------------
+                raise AssertionError(f"Temporal leakage: {len(shared)} frames shared "f"between split {i} and split {j} " f"(e.g. {sorted(shared)[:5]})" )
 
 def split_dataframe(df, sort_cols, fractions=DEFAULT_FRACTIONS):
-    """Row-fraction split for single-frame tables (U-Net only)."""
     train_end_frac, val_start_frac, val_end_frac, test_start_frac = fractions
-
     df = df.sort_values(sort_cols).reset_index(drop=True)
     n = len(df)
-
     train_end = int(n * train_end_frac)
     val_start = int(n * val_start_frac)
     val_end = int(n * val_end_frac)
