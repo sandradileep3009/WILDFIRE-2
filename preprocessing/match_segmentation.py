@@ -1,40 +1,15 @@
 from pathlib import Path
 import re
-
 import pandas as pd
 
+PROJECT_ROOT = (Path(__file__).resolve().parents[1])
 
-PROJECT_ROOT = (
-    Path(__file__).resolve().parents[1]
-)
-
-IMAGE_DIR = (
-    PROJECT_ROOT
-    / "data"
-    / "Segmentation"
-    / "Images"
-)
-
-MASK_DIR = (
-    PROJECT_ROOT
-    / "data"
-    / "Masks"
-)
-
-OUTPUT = (
-    PROJECT_ROOT
-    / "data_processed"
-    / "segmentation_pairs.csv"
-)
-
+IMAGE_DIR = (PROJECT_ROOT/ "data"/ "Segmentation"/ "Images")
+MASK_DIR = (PROJECT_ROOT/ "data"/ "Masks")
+OUTPUT = (PROJECT_ROOT/ "data_processed"/ "segmentation_pairs.csv")
 
 def get_number(path):
-
-    match = re.search(
-        r"image_(\d+)",
-        path.stem.lower()
-    )
-
+    match = re.search(r"image_(\d+)",path.stem.lower())
     if match:
         return int(match.group(1))
 
@@ -42,29 +17,21 @@ def get_number(path):
 
 
 def main():
-
     images = {}
-
     for path in IMAGE_DIR.glob("*.jpg"):
-
         number = get_number(path)
-
         if number is not None:
             images[number] = path
 
 
     masks = {}
-
     for path in MASK_DIR.glob("*.png"):
-
         number = get_number(path)
-
         if number is not None:
             masks[number] = path
 
 
     rows = []
-
     all_numbers = sorted(
         set(images.keys())
         | set(masks.keys())
@@ -72,28 +39,18 @@ def main():
 
 
     for number in all_numbers:
-
         image = images.get(number)
         mask = masks.get(number)
-
         if image is not None and mask is not None:
-
             status = "matched"
-
         elif image is not None:
-
             status = "missing_mask"
 
         else:
-
             status = "missing_image"
 
-
         rows.append(
-            {
-                "frame_number": number,
-
-                "image":
+            {"frame_number": number,"image":
                     str(image)
                     if image
                     else "",
@@ -125,17 +82,9 @@ def main():
     print("=" * 70)
     print("FLAME SEGMENTATION MATCHING")
     print("=" * 70)
-
-    print(
-        f"Images found:        {len(images)}"
-    )
-
-    print(
-        f"Masks found:         {len(masks)}"
-    )
-
-    print(
-        f"Matched pairs:       "
+    print(f"Images found:{len(images)}")
+    print(f"Masks found:{len(masks)}")
+    print( f"Matched pairs:       "
         f"{(df['status'] == 'matched').sum()}"
     )
 
