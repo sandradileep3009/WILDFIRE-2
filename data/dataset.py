@@ -1,6 +1,5 @@
 from pathlib import Path
 import re
-
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -8,38 +7,27 @@ from PIL import Image
 import torch
 from torch.utils.data import Dataset
 
-
 def extract_frame_number(path):
     match = re.search(r"image_(\d+)", str(path))
-
     if match:
         return int(match.group(1))
-
     return None
-
 
 def build_runs(frame_dir):
     frame_dir = Path(frame_dir)
-
     frames = []
-
     for path in frame_dir.glob("*"):
         if path.suffix.lower() not in [".jpg", ".jpeg", ".png"]:
             continue
-
         frame_number = extract_frame_number(path)
-
         if frame_number is not None:
             frames.append((frame_number, path))
 
     frames.sort(key=lambda x: x[0])
-
     runs = []
     current_run = []
     previous_number = None
-
     for frame_number, path in frames:
-
         if (
             previous_number is not None
             and frame_number != previous_number + 1
@@ -71,21 +59,14 @@ def load_mask_lookup(csv_path):
 
         if "match" not in status:
             continue
-
         frame_number = row.get("frame_number")
-
         if pd.isna(frame_number):
             continue
-
         frame_number = int(frame_number)
-
         mask_path = row.get("mask")
-
         if pd.isna(mask_path):
             continue
-
         lookup[frame_number] = Path(mask_path)
-
     return lookup
 
 
