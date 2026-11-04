@@ -1,14 +1,11 @@
-
 import numpy as np
 from scipy import ndimage as ndi
-
 
 def _counts(pred, gt):
     tp = (pred & gt).sum(axis=(1, 2)).astype(np.int64)
     fp = (pred & ~gt).sum(axis=(1, 2)).astype(np.int64)
     fn = (~pred & gt).sum(axis=(1, 2)).astype(np.int64)
     return tp, fp, fn
-
 
 def _boundary(mask):
     """Boundary pixels of each mask in [N, H, W]."""
@@ -18,16 +15,7 @@ def _boundary(mask):
         out[i] = mask[i] & ~er
     return out
 
-
 def _boundary_counts(pred, gt, tol):
-    """Boundary-F1 counts with a pixel tolerance.
-
-    Returns per-sample:
-      pb   number of predicted boundary px
-      gb   number of ground-truth boundary px
-      pm   predicted boundary px within tol of a GT boundary px
-      gm   GT boundary px within tol of a predicted boundary px
-    """
     pbm, gbm = _boundary(pred), _boundary(gt)
     n = len(pred)
     pb = pbm.sum(axis=(1, 2)).astype(np.int64)
@@ -46,7 +34,6 @@ def _boundary_counts(pred, gt, tol):
 
 
 def _centroids(mask):
-    """Centroid (y, x) of each mask; NaN rows for empty masks."""
     n = len(mask)
     c = np.full((n, 2), np.nan)
     ys, xs = np.mgrid[0:mask.shape[1], 0:mask.shape[2]]
@@ -59,14 +46,6 @@ def _centroids(mask):
 
 
 def sample_stats(current, target, pred_growth, boundary_tol=3):
-    """Per-sample statistics for one method on one split.
-
-    current      bool [N,H,W]  mask at last input frame
-    target       bool [N,H,W]  GT mask at t + horizon
-    pred_growth  bool [N,H,W]  predicted NEW fire pixels; anything
-                 inside `current` is ignored (the future mask is
-                 current | pred_growth)
-    """
     current = current.astype(bool)
     target = target.astype(bool)
     pred_growth = pred_growth.astype(bool) & ~current
@@ -77,8 +56,6 @@ def sample_stats(current, target, pred_growth, boundary_tol=3):
     tp_g, fp_g, fn_g = _counts(pred_growth, true_growth)
     tp_f, fp_f, fn_f = _counts(pred_future, target)
     pb, gb, pm, gm = _boundary_counts(pred_future, target, boundary_tol)
-
-    # Direction / location of NEW growth (growth-positive samples).
     cur_c = _centroids(current)
     gt_gc = _centroids(true_growth)
     pr_gc = _centroids(pred_growth)
@@ -95,22 +72,14 @@ def sample_stats(current, target, pred_growth, boundary_tol=3):
         "true_growth_px": true_growth.sum(axis=(1, 2)).astype(np.int64),
     }
 
-
-# ------------------------------------------------------------------
-# Metrics from stats (idx = sample indices, allows bootstrap)
-# ------------------------------------------------------------------
-
 def _ratio(num, den):
     return float(num) / float(den) if den > 0 else float("nan")
-
 
 def _iou(tp, fp, fn, idx):
     return _ratio(tp[idx].sum(), (tp + fp + fn)[idx].sum())
 
-
 def _dice(tp, fp, fn, idx):
     return _ratio(2 * tp[idx].sum(), (2 * tp + fp + fn)[idx].sum())
-
 
 def _sector(vec_gt, vec_pr, n_sectors=8):
     ang_gt = np.arctan2(vec_gt[:, 0], vec_gt[:, 1])
@@ -156,11 +125,6 @@ def _centroid_err(s, i):
 
 
 def _growth_vectors(s, i):
-    """Direction vectors for growth-positive samples.
-
-    Samples where the model predicts no growth count as a miss
-    (handled by the caller), they are NOT dropped.
-    """
     gt = s["gt_gc"][i] - s["cur_c"][i]
     pr = s["pr_gc"][i] - s["cur_c"][i]
     has_gt = ~np.isnan(gt).any(axis=1)
@@ -177,8 +141,7 @@ def _direction_acc(s, i):
     if has_pr.any():
         s_gt, s_pr = _sector(gt[has_pr], pr[has_pr])
         hit[has_pr] = s_gt == s_pr
-    return float(hit.mean())            # no-prediction counts as wrong
-
+    return float(hit.mean())            
 
 def _direction_err(s, i):
     gt, pr, has_gt = _growth_vectors(s, i)
@@ -195,11 +158,7 @@ def compute_metrics(stats, idx=None):
     n = len(stats["tp_g"])
     idx = np.arange(n) if idx is None else idx
     return {name: fn(stats, idx) for name, fn in METRICS.items()}
-
-
-# ------------------------------------------------------------------
-# Block bootstrap
-# ------------------------------------------------------------------
+    
 
 def _block_indices(n, block, rng):
     n_blocks = int(np.ceil(n / block))
@@ -208,9 +167,7 @@ def _block_indices(n, block, rng):
     return idx[:n]
 
 
-def bootstrap_ci(stats, metric_names=None, block=20, n_boot=1000,
-                 seed=0, alpha=0.05):
-    """95% block-bootstrap CI for each metric -> {name: (lo, hi)}."""
+def bootstrap_ci(stats, metric_names=None, block=20, n_boot=1000,seed=0, alpha=0.05):
     names = metric_names or list(METRICS)
     n = len(stats["tp_g"])
     rng = np.random.default_rng(seed)
@@ -231,15 +188,9 @@ def bootstrap_ci(stats, metric_names=None, block=20, n_boot=1000,
     return out
 
 
-def paired_bootstrap_diff(stats_a, stats_b, metric, block=20,
-                          n_boot=1000, seed=0, alpha=0.05):
-    """CI of metric(A) - metric(B) on the SAME test sequences.
-
-    If the CI excludes 0, A is better/worse than B with ~95%
-    confidence (accounting for temporal correlation).
-    """
+def paired_bootstrap_diff(stats_a, stats_b, metric, block=20,n_boot=1000, seed=0, alpha=0.05):
     n = len(stats_a["tp_g"])
-    assert n == len(stats_b["tp_g"]), "stats must be on the same samples"
+    assert n == len(stats_b["tp_g"]), 
     rng = np.random.default_rng(seed)
     fn = METRICS[metric]
     diffs = []
@@ -256,18 +207,7 @@ def paired_bootstrap_diff(stats_a, stats_b, metric, block=20,
             float(np.quantile(d, alpha / 2)),
             float(np.quantile(d, 1 - alpha / 2)))
 
-
-# ------------------------------------------------------------------
-# Threshold selection (validation only)
-# ------------------------------------------------------------------
-
-def best_threshold(prob, current, target, thresholds,
-                   objective="growth_dice"):
-    """Pick the probability threshold that maximises a pooled growth
-    metric on the VALIDATION split. Never call this on test data.
-
-    Uses only TP/FP/FN counts (fast), no boundary computations.
-    """
+def best_threshold(prob, current, target, thresholds,objective="growth_dice"):
     current = current.astype(bool)
     true_growth = target.astype(bool) & ~current
     best_t, best_v = float(thresholds[0]), -1.0
