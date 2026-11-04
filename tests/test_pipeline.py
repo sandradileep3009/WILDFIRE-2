@@ -9,14 +9,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 
-from synthetic import make_synthetic                       # noqa: E402
-from preprocessing.build_sequences import build            # noqa: E402
-from utils import baselines as B                           # noqa: E402
-from utils.data import FrameStore, build_arrays            # noqa: E402
-from utils.metrics import (                                # noqa: E402
+from synthetic import make_synthetic                       
+from preprocessing.build_sequences import build            
+from utils import baselines as B                           
+from utils.data import FrameStore, build_arrays            
+from utils.metrics import (                              
     sample_stats, compute_metrics, bootstrap_ci,
     paired_bootstrap_diff, best_threshold)
-from utils.splits import (                                 # noqa: E402
+from utils.splits import (                                 
     split_sequences, blocked_kfold, assert_no_frame_overlap)
 
 
@@ -59,7 +59,6 @@ def test_split_has_no_frame_overlap_for_any_horizon():
             tr, va, te = split_sequences(df)
             assert len(tr) and len(va) and len(te)
             assert_no_frame_overlap(tr, va, te)
-            # train targets never reach val frames
             assert tr["target_frame"].max() < va["start_frame"].min()
             assert va["target_frame"].max() < te["start_frame"].min()
 
@@ -96,10 +95,10 @@ def test_metrics_no_eps_artifact():
     cur[:, 2:5, 2:5] = True
     tgt = cur.copy()
     tgt[:, 2:5, 5] = True
-    st = sample_stats(cur, tgt, np.zeros_like(cur))        # persistence
+    st = sample_stats(cur, tgt, np.zeros_like(cur))        
     m = compute_metrics(st)
     assert m["growth_iou"] == 0.0
-    assert np.isnan(m["growth_precision"])                 # 0/0, not 1.0
+    assert np.isnan(m["growth_precision"])                 
     assert m["growth_recall"] == 0.0
 
 
@@ -145,7 +144,7 @@ def test_bootstrap_and_paired():
         assert lo <= hi
         d, dlo, dhi = paired_bootstrap_diff(
             st_d, st_p, "growth_dice", block=10, n_boot=100)
-        assert d > 0 and dlo > 0          # dilation clearly beats persistence
+        assert d > 0 and dlo > 0          
 
 
 def test_best_threshold_uses_val_only():
