@@ -95,10 +95,6 @@ class ConvLSTM(nn.Module):
 
 
 class SpreadPredictionModel(nn.Module):
-    """
-    3 RGB frames + current fire mask -> future mask logits (or growth logits,
-    depending on what target the trainer passes in).
-    """
 
     def __init__(self, in_channels=3, hidden_dims=(32, 32)):
         super().__init__()
@@ -108,10 +104,7 @@ class SpreadPredictionModel(nn.Module):
             hidden_dims=list(hidden_dims),
             kernel_size=3,
         )
-
         feature_channels = hidden_dims[-1]
-
-        # temporal features (feature_channels) + current mask (1 channel)
         self.decoder = nn.Sequential(
             nn.Conv2d(feature_channels + 1, 32, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
