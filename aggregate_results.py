@@ -1,22 +1,15 @@
-
 import json
 import re
 import sys
 from pathlib import Path
-
 import numpy as np
 import pandas as pd
-
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
-
-METRICS = ["growth_dice", "growth_iou", "future_iou", "boundary_f1",
-           "growth_recall", "growth_precision"]
-
+METRICS = ["growth_dice", "growth_iou", "future_iou", "boundary_f1","growth_recall", "growth_precision"]
 
 def group_name(tag):
     return re.sub(r"_s\d+|_h\d+", "", tag)
-
 
 def load(results_dir):
     rows = []
@@ -55,7 +48,6 @@ def summarise(df):
         for m in ("growth_dice", "future_iou", "boundary_f1"):
             r[f"{m}_ci_lo"] = g[f"{m}_lo"].mean()
             r[f"{m}_ci_hi"] = g[f"{m}_hi"].mean()
-        # share of seeds whose paired CI vs best baseline is entirely > 0
         if g["kind"].iloc[0] == "model":
             r["seeds_beating_best_baseline_growth_dice"] = int(
                 (g["d_growth_dice_vs_best_lo"] > 0).sum())
