@@ -1,22 +1,10 @@
-
-"""
-Numpy-only data loading shared by training and evaluation.
-
-Every unique image / mask is read from disk ONCE, resized, and kept in
-memory (about 100 MB for 2,003 frames at 128x128), so training does no
-disk I/O per step.
-"""
-
 import numpy as np
 import pandas as pd
 from PIL import Image
 
-
 class FrameStore:
-    """Cache of resized frames (uint8 RGB) and masks (bool)."""
-
     def __init__(self, size):
-        self.size = tuple(size)          # (H, W)
+        self.size = tuple(size)          
         self._img = {}
         self._msk = {}
 
@@ -42,18 +30,7 @@ class FrameStore:
 
 
 def build_arrays(df, store):
-    """Turn a sequences table into dense numpy arrays.
-
-    Returns a dict:
-      frames   uint8 [N, T, H, W, 3]   input RGB frames
-      hist     bool  [N, T, H, W]      input masks (same time steps)
-      current  bool  [N, H, W]         mask at the last input frame
-      target   bool  [N, H, W]         ground-truth mask at t + horizon
-      growth   bool  [N, H, W]         target & ~current
-      frame_no int   [N]               current_frame_number
-    """
     frames, hist, cur, tgt = [], [], [], []
-
     for _, row in df.iterrows():
         imgs = str(row["input_frames"]).split("|")
         msks = str(row["input_masks"]).split("|")
