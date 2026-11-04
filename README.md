@@ -189,66 +189,13 @@ Wildfire_Growth_Prediction/
 └── requirements.txt
 ```
 
----
-
-## Running the Project
-
-### Dataset Audit
-
-```bash
-python preprocessing/data_audit.py
-```
-
-### Train the Growth Model
-
-```bash
-python -m training.train_growth --seed 1337
-```
-
-### Evaluate
-
-```bash
-python evaluation_growth.py
-```
-
-### Visualize Predictions
-
-```bash
-python visualize_predictions.py
-```
-
----
-
-## Dataset
-
-The dataset is **not included in this repository** because of its size.
-
-The preprocessing pipeline expects the dataset to be available locally and generates the required image-mask pair and temporal sequence metadata.
-
----
-
-## Limitations
-
-The current study has several limitations:
-
-* The number of temporally matched fire masks is substantially smaller than the total number of fire images.
-* The current model predicts only a short future horizon.
-* The model learns visual temporal patterns rather than explicitly modeling physical wildfire dynamics.
-* Environmental factors such as wind, humidity, temperature, terrain, and fuel characteristics are not currently incorporated.
-* Generalization to different geographic regions, sensors, and wildfire conditions requires further validation.
-
-Therefore, the system should be considered a **research prototype rather than an operational wildfire forecasting system**.
-
----
 
 ## Future Work
 
 Potential extensions include:
 
-* Multi-step fire spread prediction
 * Integration of meteorological and geographic variables
 * Longer temporal sequences
-* Uncertainty estimation
 * Evaluation on independent wildfire events
 * Comparison with additional temporal architectures
 
