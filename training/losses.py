@@ -124,11 +124,6 @@ def nonzero_target_fraction(targets):
     )
 
 def band_mask(current, band_px):
-    """Pixels within band_px of the current fire, excluding the fire.
-
-    current: float tensor [B,1,H,W] in {0,1}. Uses max-pooling as a
-    (square) dilation.
-    """
     k = 2 * int(band_px) + 1
     dil = F.max_pool2d(current, kernel_size=k, stride=1, padding=band_px)
     return (dil > 0.5) & (current < 0.5)
@@ -141,29 +136,11 @@ def masked_bce_dice_loss(
     pos_weight=5.0,
     smooth=1.0,
 ):
-    """BCE + Dice computed ONLY on `valid` pixels.
-
-    For growth prediction `valid` = pixels outside the current fire
-    (optionally inside a band around its edge), because pixels already
-    on fire cannot be NEW growth. This removes the trivial negatives
-    that dominated the old loss.
-
-    Dice is POOLED over the batch (not averaged per sample), so
-    samples with no growth cannot contribute a loss of 1.0 and swamp
-    the gradient.
-
-    logits, targets, valid: [B,1,H,W]; valid is bool or {0,1}.
-    """
     valid = valid.float()
     targets = targets.float() * valid
+    weight = torch.tensor(pos_weight, dtype=logits.dtype, device=logits.device)
 
-    weight = torch.tensor(
-        pos_weight, dtype=logits.dtype, device=logits.device
-    )
-
-    bce = F.binary_cross_entropy_with_logits(
-        logits, targets, pos_weight=weight, reduction="none"
-    )
+    bce = F.binary_cross_entropy_with_logits(logits, targets, pos_weight=weight, reduction="none")
     bce = (bce * valid).sum() / valid.sum().clamp(min=1.0)
 
     probs = torch.sigmoid(logits) * valid
@@ -173,48 +150,17 @@ def masked_bce_dice_loss(
 
     return bce + dice
 def band_mask(current, band_px):
-    """Pixels within band_px of the current fire, excluding the fire.
-
-    current: float tensor [B,1,H,W] in {0,1}. Uses max-pooling as a
-    (square) dilation.
-    """
     k = 2 * int(band_px) + 1
     dil = F.max_pool2d(current, kernel_size=k, stride=1, padding=band_px)
     return (dil > 0.5) & (current < 0.5)
 
 
-def masked_bce_dice_loss(
-    logits,
-    targets,
-    valid,
-    pos_weight=5.0,
-    smooth=1.0,
-):
-    """BCE + Dice computed ONLY on `valid` pixels.
-
-    For growth prediction `valid` = pixels outside the current fire
-    (optionally inside a band around its edge), because pixels already
-    on fire cannot be NEW growth. This removes the trivial negatives
-    that dominated the old loss.
-
-    Dice is POOLED over the batch (not averaged per sample), so
-    samples with no growth cannot contribute a loss of 1.0 and swamp
-    the gradient.
-
-    logits, targets, valid: [B,1,H,W]; valid is bool or {0,1}.
-    """
+def masked_bce_dice_loss(logits,targets,valid,pos_weight=5.0,smooth=1.0,):
     valid = valid.float()
     targets = targets.float() * valid
-
-    weight = torch.tensor(
-        pos_weight, dtype=logits.dtype, device=logits.device
-    )
-
-    bce = F.binary_cross_entropy_with_logits(
-        logits, targets, pos_weight=weight, reduction="none"
-    )
+    weight = torch.tensor(pos_weight, dtype=logits.dtype, device=logits.device)
+    bce = F.binary_cross_entropy_with_logits( logits, targets, pos_weight=weight, reduction="none")
     bce = (bce * valid).sum() / valid.sum().clamp(min=1.0)
-
     probs = torch.sigmoid(logits) * valid
     inter = (probs * targets).sum()
     denom = probs.sum() + targets.sum()
